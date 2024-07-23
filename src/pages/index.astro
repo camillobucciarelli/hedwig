@@ -1,25 +1,23 @@
 ---
 import i18next, { changeLanguage } from "i18next";
-
-import { UserRecord, getAuth } from "firebase-admin/auth";
-import { app } from "../firebase/server";
+import getSignedInUser from "~/data/firebase/auth/get-signed-in-user";
+import verifySessionCookie from "~/data/firebase/auth/verify-session-cookie";
 
 changeLanguage("en");
 
-const auth = getAuth(app);
-
-/* Check current session */
-// if (!Astro.cookies.has("session")) {
-//   return Astro.redirect("/signin");
-// }
-const sessionCookie = Astro.cookies.get("session")?.value;
-let user: UserRecord | null = null;
-if (sessionCookie) {
-  const decodedCookie = await auth.verifySessionCookie(sessionCookie);
-  user = await auth.getUser(decodedCookie.uid);
+if (!Astro.cookies.has("__session")) {
+  return Astro.redirect("/signin");
+}
+const sessionCookie = Astro.cookies.get("__session")?.json();
+if (!sessionCookie) {
+  return Astro.redirect("/signin");
+}
+const decodedCookie = await verifySessionCookie(sessionCookie["tokenId"]);
+if (!decodedCookie) {
+  return Astro.redirect("/signin");
 }
 
-
+const user = await getSignedInUser(sessionCookie["uid"]);
 ---
 
 <html lang={i18next.language}>
@@ -39,7 +37,7 @@ if (sessionCookie) {
         </form>
       )}
       <a href="/signin">Login</a>
-      {user?.customClaims?.organizer && <a href="/backoffice">Backoffice</a>}
+      {user?.role && <a href="/backoffice">Backoffice</a>}
     </main>
   </body>
 </html>

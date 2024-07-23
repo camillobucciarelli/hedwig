@@ -1,19 +1,21 @@
 ---
-import { getAuth } from "firebase-admin/auth";
 import i18next, { changeLanguage } from "i18next";
 import LoginComponent from "~/components/LoginComponent.astro";
-import { app } from "../firebase/server";
+import verifySessionCookie from "~/data/firebase/auth/verify-session-cookie";
 
 changeLanguage("en");
 
 /* Check if the user is authenticated */
-const auth = getAuth(app);
-if (Astro.cookies.has("session")) {
-  const sessionCookie = Astro.cookies.get("session")!.value;
-  const decodedCookie = await auth.verifySessionCookie(sessionCookie);
-  if (decodedCookie) {
-    return Astro.redirect("/");
-  }
+if (!Astro.cookies.has("__session")) {
+  return Astro.redirect("/signin");
+}
+const sessionCookie = Astro.cookies.get("__session")?.json()["tokenId"];
+if (!sessionCookie) {
+  return Astro.redirect("/signin");
+}
+const decodedCookie = await verifySessionCookie(sessionCookie);
+if (!decodedCookie) {
+  return Astro.redirect("/signin");
 }
 ---
 
@@ -25,7 +27,7 @@ if (Astro.cookies.has("session")) {
   </head>
   <body>
     <main role="main">
-        <LoginComponent />
+      <LoginComponent />
     </main>
   </body>
 </html>
